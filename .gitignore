@@ -10,4 +10,5 @@ test2.json
 __pycache__/
 *.pyc
 print_graph.ipynb
+
 sample_log.log

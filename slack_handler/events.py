@@ -61,24 +61,24 @@ async def handle_slack_event(request: Request):
 
         print(f"dag_name: {dag_name}, dag_run_id: {dag_run_id}")
         if dag_name and dag_run_id:
-            # Create a unique key for the DAG and run ID
-            dag_key = (dag_name, dag_run_id)
+            # # Create a unique key for the DAG and run ID
+            # dag_key = (dag_name, dag_run_id)
 
-            # Check if this DAG has already been processed
-            if dag_key in processed_dags:
-                logger.info(
-                    "This DAG has already been processed. Ignoring this message."
-                )
-                return JSONResponse(
-                    content={"status": "ok", "message": "Already processed."}
-                )
+            # # Check if this DAG has already been processed
+            # if dag_key in processed_dags:
+            #     logger.info(
+            #         "This DAG has already been processed. Ignoring this message."
+            #     )
+            #     return JSONResponse(
+            #         content={"status": "ok", "message": "Already processed."}
+            #     )
 
-            # Mark this DAG as processed
-            processed_dags.add(dag_key)
+            # # Mark this DAG as processed
+            # processed_dags.add(dag_key)
 
-            logger.info(
-                "Incoming Slack Message: %s", json.dumps(message_data, indent=2)
-            )
+            # logger.info(
+            #     "Incoming Slack Message: %s", json.dumps(message_data, indent=2)
+            # )
 
             # Proceed with processing the DAG
             try:

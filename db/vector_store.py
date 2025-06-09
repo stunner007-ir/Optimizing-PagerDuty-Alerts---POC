@@ -1,8 +1,6 @@
+import os
 from langchain_community.vectorstores import Chroma
 from agent.model import embedding_model
-
-
-import os
 
 
 CHROMA_DIR = "chroma_db"
