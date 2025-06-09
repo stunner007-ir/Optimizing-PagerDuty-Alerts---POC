@@ -6,5 +6,8 @@ agent/graph2.py
 extracted_errors.txt
 log_test.py
 chroma_db
+test2.json
 __pycache__/
 *.pyc
+print_graph.ipynb
+sample_log.log
