@@ -1,0 +1,10 @@
+venv/
+.env
+ex.py
+test.py
+agent/graph2.py
+extracted_errors.txt
+log_test.py
+chroma_db
+__pycache__/
+*.pyc
