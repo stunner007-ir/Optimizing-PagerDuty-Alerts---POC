@@ -1,7 +1,15 @@
 import time
 import hmac
 import hashlib
-from config import SLACK_SIGNING_SECRET
+
+# from config import SLACK_SIGNING_SECRET
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+
+SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET")
 
 
 def verify_slack_signature(headers, raw_body: bytes) -> bool:
@@ -21,5 +29,4 @@ def verify_slack_signature(headers, raw_body: bytes) -> bool:
             SLACK_SIGNING_SECRET.encode(), sig_basestring.encode(), hashlib.sha256
         ).hexdigest()
     )
-
     return hmac.compare_digest(my_signature, slack_signature)

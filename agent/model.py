@@ -17,8 +17,9 @@ if not api_key:
 
 # Initialize the ChatOpenAI model
 model = ChatOpenAI(
-    model="o3-mini",
+    model="o4-mini",
     max_retries=2,
+    # temperature=0.4,
     base_url=base_url,
     api_key=api_key,
 )

@@ -1,0 +1,18 @@
+=== NORMALIZATION COMPARISON ===
+
+Sample of changes:
+
+ORIGINAL (first 1000 chars):
+--------------------------------------------------
+spdb-airflow-worker-3.spdb-airflow-worker.airflow.svc.cluster.local
+*** Found remote logs:
+***   * gs://spdb-pipe-prod-airflow-logs/spdb-logs/dag_id=data_replication__c6k__gcs__cdna_proc_prd/run_id=scheduled__2025-06-09T15:30:00+00:00/task_id=alluxio_init_config_c6000_gcs-spdb-dwh-prod/attempt=3.log
+[2025-06-10T15:32:44.465+0000] {taskinstance.py:1090} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: data_replication__c6k__gcs__cdna_proc_prd.alluxio_init_config_c6000_gcs-spdb-dwh-prod scheduled__2025-06-09T15:30:00+00:00 [queued]>
+[2025-06-10T15:32:44.476+0000] {taskinstance.py:1090} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: data_replication__c6k__gcs__cdna_proc_prd.alluxio_init_config_c6000_gcs-spdb-dwh-prod scheduled__2025-06-09T15:30:00+00:00 [queued]>
+[2025-06-10T15:32:44.476+0000] {taskinstance.py:1288} INFO - 
+--------------------------------------------------------------------------------
+[2025-06-10T15:32:44...
+
+NORMALIZED (first 1000 chars):
+--------------------------------------------------
+spdb-airflow-worker-3.spdb-airflow-worker.airflow.svc.cluster.local *** Found remote logs: *** * gs:/<PATH>/dag_id=data_replication__c6k__gcs__cdna_proc_prd/run_id=scheduled__<TIMESTAMP>+00:00/task_id=alluxio_init_config_c6000_gcs-spdb-dwh-prod/attempt=3.log [<TIMESTAMP>+0000] {taskinstance.py:<LINE_NUM>} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: data_replication__c6k__gcs__cdna_proc_prd.alluxio_init_config_c6000_gcs-spdb-dwh-prod scheduled__<TIMESTAMP>+00:00 [queued]> [<TIMESTAMP>+0000] {taskinstance.py:<LINE_NUM>} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: data_replication__c6k__gcs__cdna_proc_prd.alluxio_init_config_c6000_gcs-spdb-dwh-prod scheduled__<TIMESTAMP>+00:00 [queued]> [<TIMESTAMP>+0000] {taskinstance.py:<LINE_NUM>} INFO - -------------------------------------------------------------------------------- [<TIMESTAMP>+0000] {taskinstance.py:<LINE_NUM>} INFO - Starting attempt 3 of 3 [<TIMESTAMP>+0000]...

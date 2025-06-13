@@ -1,0 +1,49 @@
+Error 1:
+ERROR - Task failed with exception
+
+Error 2:
+ERROR - Failed to execute job 51023951 for task replicate_data_java_bulk_ichiba_mart_dr_easy_id_list_c6000 (Pod alluxio-java-client-z78qlvqs returned a failure:
+
+Error 3:
+Exception: Replication job failed from /mnt/minio-nvme/user/datalake/ichiba_mart/dr_easy_id_list to /mnt/c6000/user/datalake/datalake__ichiba_mart/dr_easy_id_list
+
+Error 4:
+exception
+Traceback (most recent call last):
+
+Error 5:
+Exception: Pod alluxio-java-client-z78qlvqs returned a failure:
+
+Error 6:
+failed with status code', 404, 'Expected one of', <HTTPStatus.OK: 200>, <HTTPStatus.PARTIAL_CONTENT: 206>)
+
+Error 7:
+FAILED: 0
+
+Error 8:
+failed from /mnt/minio-nvme/user/datalake/ichiba_mart/dr_easy_id_list to /mnt/c6000/user/datalake/datalake__ichiba_mart/dr_easy_id_list
+
+Error 9:
+failed with exception
+
+Error 10:
+Failed to execute job 51023951 for task replicate_data_java_bulk_ichiba_mart_dr_easy_id_list_c6000 (Pod alluxio-java-client-z78qlvqs returned a failure:
+
+Error 11:
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.7/site-packages/airflow/providers/cncf/kubernetes/operators/kubernetes_pod.py", line 516, in execute
+    remote_pod=remote_pod,
+  File "/home/airflow/.local/lib/python3.7/site-packages/airflow/providers/cncf/kubernetes/operators/kubernetes_pod.py", line 540, in cleanup
+    f"Pod {pod and pod.metadata.name} returned a failure:\n{error_message}\n"
+airflow.exceptions.AirflowException: Pod alluxio-java-client-z78qlvqs returned a failure:
+None
+
+Error 12:
+Not able to find the version directory,spdb_ver under the path,s3a://datalake-nvme/user/datalake/ichiba_mart/dr_easy_id_list
+
+Error 13:
+Not able to replicate delta directory: /mnt/c6000/user/datalake/datalake__ichiba_mart/dr_easy_id_list/driver_id=33
+
+Error 14:
+Replication job failed from /mnt/minio-nvme/user/datalake/ichiba_mart/dr_easy_id_list to /mnt/c6000/user/datalake/datalake__ichiba_mart/dr_easy_id_list
+

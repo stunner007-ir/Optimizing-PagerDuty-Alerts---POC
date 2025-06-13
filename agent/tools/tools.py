@@ -103,6 +103,7 @@ def send_to_slack(message: str) -> str:
     slack_bot_token = SLACK_BOT_TOKEN
     slack_channel_id = SLACK_CHANNEL_ID
 
+
     if not slack_bot_token or not slack_channel_id:
         return "Error: SLACK_BOT_TOKEN or SLACK_CHANNEL_ID not set in environment variables."
 

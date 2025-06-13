@@ -8,6 +8,7 @@ from slack_handler.utils import parse_slack_text
 from slack_handler.verifier import verify_slack_signature
 from agent.graph import graph
 from agent.graph2 import graph2
+from agent.graph3 import graph3
 
 # from agent.graph2 import is_processing_failure
 
@@ -85,7 +86,7 @@ async def handle_slack_event(request: Request):
                 is_processing_failure = (
                     True  # Set the flag to indicate processing has started
                 )
-                response = graph2.invoke({"messages": message_data})
+                response = graph3.invoke({"messages": message_data})
                 is_processing_failure = False  # Reset the flag after processing
                 return JSONResponse(content={"status": "ok", "response": response})
             except Exception as e:

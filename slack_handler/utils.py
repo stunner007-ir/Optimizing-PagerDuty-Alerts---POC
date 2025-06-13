@@ -99,3 +99,43 @@ def parse_slack_text(text: str) -> Dict:
     except Exception as e:
         logger.error(f"Error parsing Slack text: {e}")
         return {"error": str(e), "full_text": text}
+
+
+
+# Utility function to normalize logs for better similarity matching
+def normalize_error_logs(logs: str) -> str:
+    """Normalize logs by removing timestamps, IDs, and other variable content"""
+    import re
+
+    # Remove timestamps (various formats)
+    normalized = re.sub(
+        r"\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}[\.\d]*[Z]?", "<TIMESTAMP>", logs
+    )
+    normalized = re.sub(
+        r"\d{2}/\d{2}/\d{4}\s\d{2}:\d{2}:\d{2}", "<TIMESTAMP>", normalized
+    )
+
+    # Remove UUIDs
+    normalized = re.sub(
+        r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+        "<UUID>",
+        normalized,
+    )
+
+    # Remove run IDs (assuming they follow a pattern)
+    normalized = re.sub(r"run_id[:\s]*[\w\-]+", "run_id: <RUN_ID>", normalized)
+    normalized = re.sub(r"task_id[:\s]*[\w\-]+", "task_id: <TASK_ID>", normalized)
+
+    # Remove file paths but keep the file name
+    normalized = re.sub(r"(/[\w\-\.]+)+/([^/\s]+)", r"<PATH>/\2", normalized)
+
+    # Remove line numbers
+    normalized = re.sub(r"line\s*\d+", "line <LINE_NUM>", normalized)
+
+    # Remove memory addresses
+    normalized = re.sub(r"0x[0-9a-fA-F]+", "<MEMORY_ADDR>", normalized)
+
+    # Normalize whitespace
+    normalized = " ".join(normalized.split())
+
+    return normalized

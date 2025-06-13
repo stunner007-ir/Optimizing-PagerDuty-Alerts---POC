@@ -1,7 +1,7 @@
 import os
-from langchain_community.vectorstores import Chroma
+# from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from agent.model import embedding_model
-
 
 CHROMA_DIR = "chroma_db"
 os.makedirs(CHROMA_DIR, exist_ok=True)
