@@ -1,0 +1,56 @@
+[
+    {
+        "Error Message": "AirflowFailException: THIS ISSUE CANNOT BE RESOLVED BY RERUN: CommunicationsException: Communications link failure",
+        "Error Category": "Airflow",
+        "Error Type": "Communications Failure",
+        "Action to be taken": "Verify network connectivity between Airflow worker and target system.\nEnsure the target system is up and running."
+    },
+    {
+        "Error Message": "airflow.exceptions.AirflowException: SSH operator error: exit status = 1",
+        "Error Category": "Airflow",
+        "Error Type": "SSH Operator Failure",
+        "Action to be taken": "Rerun\nCheck SSH key configuration, permissions, and the availability of the remote host"
+    },
+    {
+        "Error Message": "airflow.exceptions.AirflowException: Pod pipeline-export-xw18yp7s returned a failure",
+        "Error Category": "Airflow",
+        "Error Type": "Pod Failure\u00a0",
+        "Action to be taken": "Rerun\nCheck resource requests and limits for the pod and investigate potential issues with the container image."
+    },
+    {
+        "Error Message": "airflow.exceptions.AirflowException: 'branch_task_ids' must contain only valid task_ids. Invalid tasks found: {'RHPAPP__MYSQL__main__pharmacy_image__LandingZoneQC'}",
+        "Error Category": "airflow",
+        "Error Type": "Invalid Task Configuration",
+        "Action to be taken": "occurred due to new release\ncheck the task IDs specified in the\u00a0branch_task_idslist and ensure they are valid and exist in the DAG."
+    },
+    {
+        "Error Message": "airflow.exceptions.InvalidStatsNameException: The stat_name (local_task_job.task_exit.8656888.data_replication_gcs-spdb-mart-prod__c6000__datalake__spdb__hive__point__oracle__ptadmin_at_sv_epnt001_jpe1_merge_user_rank.upstream_table_sensor_spdb-mart-prod_spdb__point__oracle__ptadmin_at_sv_epnt001_jpe1_merge_user_rank.0) has to be less than 250 characters. ",
+        "Error Category": "airflow",
+        "Error Type": "Stats Name Too Long",
+        "Action to be taken": NaN
+    },
+    {
+        "Error Message": "airflow.exceptions.AirflowException: Pod alluxio-mount-path-xisjpd47 returned a failure.",
+        "Error Category": "airflow",
+        "Error Type": "Pod Failure",
+        "Action to be taken": "Rerun\nCheck resource requests and limits for the pod and investigate potential issues with the container image."
+    },
+    {
+        "Error Message": "google.api_core.exceptions.BadRequest: 400 Query error: Function not found",
+        "Error Category": "airflow",
+        "Error Type": "Function Not Found",
+        "Action to be taken": "Rerun\nrequires more debugging, could be code issue  - Fix required"
+    },
+    {
+        "Error Message": "trino.exceptions.TrinoExternalError: TrinoExternalError(type=EXTERNAL, name=HIVE_PATH_ALREADY_EXISTS, message=\"Target directory for table 'spdb__itemx_sku.item__itemx_item_v2__raw' already exists: s3a://datalake-nvme/user/datalake/spdb__itemx_sku/item__itemx_item_v2__raw\", query_id=20250414_021144_02646_yfw3k)",
+        "Error Category": "airflow",
+        "Error Type": "Hive Path Already Exists",
+        "Action to be taken": NaN
+    },
+    {
+        "Error Message": "ERROR - Failed to execute job 9118231 for task sub_permission_info_upstream_landing_table_dependency_check (Payload contains error {\"task_instance_key\": \"MNODPI_SDR_T01__sub_permission_info_upstream_landing_table_dependency_check__20250411\", \"status\": \"timeout\", \"result\": \"2\", \"remarks\": null}; 3082223)",
+        "Error Category": "Airflow",
+        "Error Type": "Dependency timeout",
+        "Action to be taken": "Check upstream task"
+    }
+]

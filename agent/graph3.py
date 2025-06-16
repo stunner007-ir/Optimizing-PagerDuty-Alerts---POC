@@ -1,4 +1,4 @@
-from typing import TypedDict, List, Dict, Optional, Literal
+from typing import TypedDict, List, Dict, Optional, Literal, Any
 import time
 import uuid
 import json
@@ -8,8 +8,11 @@ from langgraph.graph import StateGraph, END
 from langchain_core.messages import BaseMessage, HumanMessage
 from agent.tools.tools import tools, fetch_log_details, send_to_slack, rerun_dag
 from db.vector_store import store_analysis, vectorstore
+from db.error_categoryDB import store_error_categories, retrieve_similar_error_action
 from agent.model import model
 from utilities.utils import extract_errors_from_log
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
 
 
 # Load env and setup logging
@@ -48,6 +51,11 @@ class GraphState(TypedDict):
     cached_actions: Optional[str]
     is_cached: Optional[bool]
     similarity_score: Optional[float]  # Add similarity score
+    error_category: Optional[str]
+    error_message: Optional[str]
+    error_type: Optional[str]
+    actions: Optional[str]
+    action_state: Optional[str]
 
 
 # Model Binding
@@ -134,6 +142,140 @@ def get_logs(state: GraphState) -> Dict[str, str]:
         return {"logs": f"Error: {e}", "extracted_logs": ""}
 
 
+# 7.  RCA Generation Node
+def create_rca_node():
+    prompt_text = """You are an expert in Airflow and debugging complex systems.
+    Analyze the following Airflow logs to determine the root cause of the failure.
+    Present your findings in the following format:
+
+    **Root Cause:** [A concise description of the root cause]
+
+    **Contributing Factors:** [A bulleted list of factors that contributed to the failure]
+
+    **Steps to Reproduce:** [Detailed steps to reproduce the issue]
+
+    **Resolution:** [Specific steps to resolve the issue and prevent it from recurring]
+
+    **Logs:**
+    {logs}
+    """
+
+    prompt = ChatPromptTemplate.from_template(prompt_text)
+
+    llm = prompt | model
+
+    def generate_rca(state: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generates a root cause analysis from Airflow logs using an LLM.
+
+        Args:
+            state (Dict[str, Any]): The current LangGraph state.  Must contain Airflow logs under the key 'logs'.
+
+        Returns:
+            Dict[str, Any]:  A dictionary containing the updated state, with the RCA stored under the keys 'analysis_results' and 'proposed_solution'.
+        """
+        extracted_logs = state.get("extracted_logs")
+        if not logs:
+            return {
+                "analysis_results": "Error: Airflow logs not found in state.",
+                "proposed_solution": "",
+            }
+
+        try:
+            rca_response = llm.invoke({"logs": extracted_logs})
+            rca_text = rca_response.content
+
+            #  Split the response into analysis and solution (if the LLM follows the format)
+            if "**Root Cause:**" in rca_text and "**Resolution:**" in rca_text:
+                try:
+                    root_cause_start = rca_text.find("**Root Cause:**") + len(
+                        "**Root Cause:**"
+                    )
+                    contributing_factors_start = rca_text.find(
+                        "**Contributing Factors:**"
+                    )
+                    if contributing_factors_start == -1:
+                        contributing_factors_start = len(rca_text)
+                    analysis = rca_text[
+                        root_cause_start:contributing_factors_start
+                    ].strip()
+
+                    resolution_start = rca_text.find("**Resolution:**") + len(
+                        "**Resolution:**"
+                    )
+                    solution = rca_text[resolution_start:].strip()
+                    print(f"RCA Analysis: {analysis}")
+                    print(f"RCA Solution: {solution}")
+                except Exception as e:
+                    analysis = rca_text
+                    solution = "Could not parse analysis and solution accurately."
+            else:
+                analysis = rca_text
+                solution = "Could not parse analysis and solution accurately."
+
+            return {"analysis_results": analysis, "proposed_solution": solution}
+        except Exception as e:
+            return {
+                "analysis_results": f"Error generating RCA: {e}",
+                "proposed_solution": "",
+            }
+
+    return generate_rca
+
+
+# 8.  Search Error Category
+def search_error_category(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Search for error category based on logs and update the action state.
+    """
+    logger.info("=== NODE: search_error_category - Searching for error category ===")
+
+    extracted_logs = state.get("extracted_logs", "")
+
+    if not extracted_logs:
+        logger.warning("No logs to analyze. Returning default 'No logs to analyze'.")
+        return {"error_category": "No logs to analyze"}
+
+    try:
+        # Use the extracted logs as the query
+        query_text = extracted_logs
+        similar_docs = retrieve_similar_error_action(query_text, k=3)
+
+        if similar_docs:
+            # Assuming the first result is the best match
+            best_match = similar_docs[0]
+            metadata = best_match.metadata
+            error_category = metadata.get("error_category", "Unknown")
+            error_type = metadata.get("error_type", "Unknown")
+            actions = metadata.get("actions", "No actions defined")
+
+            logger.info(
+                f"Found error category: {error_category}, Error Type: {error_type}, Actions: {actions}"
+            )
+
+            # Construct the result dictionary
+            result = {
+                "error_message": best_match.page_content,
+                "error_category": error_category,
+                "error_type": error_type,
+                "actions": actions,
+                # "similarity_score": best_match.score, #similarity score is not an attribute of best_match object
+            }
+
+            # Update the state with the actions
+            state["action_state"] = actions
+            logger.info(f"Updated action_state in GraphState with: {actions}")
+
+            return result
+        else:
+            logger.warning("No matching category found.")
+            return {"error_category": "No matching category found"}
+
+    except Exception as e:
+        logger.exception(f"Error searching category: {e}")  # Log the full exception
+        return {"error_category": f"Error searching category: {e}"}
+
+
 # 6b. Do Not Fetch Logs (if DAG didn't fail)
 def do_not_fetch_logs(state: GraphState) -> Dict[str, str]:
     logger.info("=== NODE: do_not_fetch_logs - Skipping log fetch ===")
@@ -152,7 +294,9 @@ def check_error_bucket(state: GraphState) -> Dict[str, any]:
     if not extracted_logs and logs:
         extracted_logs = extract_errors_from_log(logs)
 
-    query_text = extracted_logs if isinstance(extracted_logs, str) else "\n".join(extracted_logs)
+    query_text = (
+        extracted_logs if isinstance(extracted_logs, str) else "\n".join(extracted_logs)
+    )
 
     if not extracted_logs:
         logger.warning("No logs to check against")
@@ -247,7 +391,7 @@ def analyze_logs(state: GraphState) -> Dict[str, str]:
     dag_id = state.get("dag_name", "")
 
     prompt = (
-        f"Please analyze the following Errors from the logs from DAG '{dag_id}':\n\n{extracted_logs}\n\n and generate proper analysis and a proposed solution. don't miss any thing\n"
+        f"Please analyze the following Errors from the logs from DAG '{dag_id}':\n\n{extracted_logs}\n\n and generate proper root cause analysis and a proposed solution. don't miss any thing\n"
         "Respond in the following format:\n"
         "Analysis: <your analysis>\n"
         "Solution: <your proposed solution>"
@@ -422,6 +566,7 @@ def summarize_outcome(state: GraphState) -> Dict[str, str]:
 # GRAPH CONSTRUCTION
 # ============================================
 
+
 # GRAPH
 builder = StateGraph(GraphState)
 builder.set_entry_point("extract_info")
@@ -432,6 +577,8 @@ builder.add_node("validate_dag_info", validate_dag_info)
 builder.add_node("exit", exit_node)
 builder.add_node("route_logs", route_logs_node)
 builder.add_node("get_logs", get_logs)
+builder.add_node("generate_rca", create_rca_node())  # Add the RCA node
+builder.add_node("search_error_category", search_error_category)
 builder.add_node("do_not_fetch_logs", do_not_fetch_logs)
 builder.add_node("check_error_bucket", check_error_bucket)
 builder.add_node("analyze_logs", analyze_logs)
@@ -456,8 +603,12 @@ builder.add_conditional_edges(
     {"get_logs": "get_logs", "do_not_fetch_logs": "do_not_fetch_logs"},
 )
 
-# Modified flow: get logs -> check for similar errors -> analyze if needed
-builder.add_edge("get_logs", "check_error_bucket")
+# Modified flow: get logs -> RCA -> check for similar errors -> analyze if needed
+builder.add_edge("get_logs", "generate_rca")  # get_logs now goes to generate_rca
+builder.add_edge(
+    "generate_rca", "search_error_category"
+)  # generate_rca goes to check_error_bucket
+builder.add_edge("search_error_category", "check_error_bucket")
 
 builder.add_conditional_edges(
     "check_error_bucket",
