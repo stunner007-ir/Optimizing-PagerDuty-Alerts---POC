@@ -1,0 +1,276 @@
+cokwd999cokwd007sqlarai001-1770446f3c2940c8880901d213109f45
+*** Reading remote log from gs://onprem-prod-dwt-airflow-remote-logs/onprem-logs/dag_id=COKWD999/run_id=scheduled__2025-06-09T09:30:00+00:00/task_id=COKWD007_SQL_ARAI001/attempt=5.log.
+*** Previous log discarded: 404 GET https://storage.googleapis.com/download/storage/v1/b/onprem-prod-dwt-airflow-remote-logs/o/onprem-logs%2Fdag_id%3DCOKWD999%2Frun_id%3Dscheduled__2025-06-09T09%3A30%3A00%2B00%3A00%2Ftask_id%3DCOKWD007_SQL_ARAI001%2Fattempt%3D5.log?alt=media: No such object: onprem-prod-dwt-airflow-remote-logs/onprem-logs/dag_id=COKWD999/run_id=scheduled__2025-06-09T09:30:00+00:00/task_id=COKWD007_SQL_ARAI001/attempt=5.log: ('Request failed with status code', 404, 'Expected one of', <HTTPStatus.OK: 200>, <HTTPStatus.PARTIAL_CONTENT: 206>)
+
+[2025-06-16T10:34:48.955+0000] {taskinstance.py:1165} INFO - Dependencies all met for <TaskInstance: COKWD999.COKWD007_SQL_ARAI001 scheduled__2025-06-09T09:30:00+00:00 [queued]>
+[2025-06-16T10:34:48.967+0000] {taskinstance.py:1165} INFO - Dependencies all met for <TaskInstance: COKWD999.COKWD007_SQL_ARAI001 scheduled__2025-06-09T09:30:00+00:00 [queued]>
+[2025-06-16T10:34:48.967+0000] {taskinstance.py:1362} INFO - 
+--------------------------------------------------------------------------------
+[2025-06-16T10:34:48.967+0000] {taskinstance.py:1363} INFO - Starting attempt 5 of 8
+[2025-06-16T10:34:48.967+0000] {taskinstance.py:1364} INFO - 
+--------------------------------------------------------------------------------
+[2025-06-16T10:34:48.984+0000] {taskinstance.py:1383} INFO - Executing <Task(BigQueryExecuteQueryOperator): COKWD007_SQL_ARAI001> on 2025-06-09 09:30:00+00:00
+[2025-06-16T10:34:48.990+0000] {standard_task_runner.py:54} INFO - Started process 80 to run task
+[2025-06-16T10:34:48.997+0000] {standard_task_runner.py:82} INFO - Running: ['airflow', 'tasks', 'run', 'COKWD999', 'COKWD007_SQL_ARAI001', 'scheduled__2025-06-09T09:30:00+00:00', '--job-id', '7222078', '--raw', '--subdir', 'DAGS_FOLDER/bisp_marts/COKWD999.py', '--cfg-path', '/tmp/tmpue_ot2wn']
+[2025-06-16T10:34:48.999+0000] {standard_task_runner.py:83} INFO - Job 7222078: Subtask COKWD007_SQL_ARAI001
+[2025-06-16T10:34:49.002+0000] {dagbag.py:525} INFO - Filling up the DagBag from /opt/airflow/dags/bisp_marts/COKWD999.py
+[2025-06-16T10:34:50.070+0000] {logging_mixin.py:117} INFO - Loading the dwt_job_mapping csv!!!
+[2025-06-16T10:34:50.102+0000] {base.py:71} INFO - Using connection ID 'slack_conn' for task execution.
+[2025-06-16T10:34:50.193+0000] {task_command.py:384} INFO - Running <TaskInstance: COKWD999.COKWD007_SQL_ARAI001 scheduled__2025-06-09T09:30:00+00:00 [running]> on host cokwd999cokwd007sqlarai001-24d92094264743be9eaea3c1b1e8e4c1
+[2025-06-16T10:34:50.288+0000] {taskinstance.py:1592} INFO - Exporting the following env vars:
+AIRFLOW_CTX_DAG_EMAIL=shivakumar.dorai@rakuten.com
+AIRFLOW_CTX_DAG_OWNER=airflow
+AIRFLOW_CTX_DAG_ID=COKWD999
+AIRFLOW_CTX_TASK_ID=COKWD007_SQL_ARAI001
+AIRFLOW_CTX_EXECUTION_DATE=2025-06-09T09:30:00+00:00
+AIRFLOW_CTX_TRY_NUMBER=5
+AIRFLOW_CTX_DAG_RUN_ID=scheduled__2025-06-09T09:30:00+00:00
+[2025-06-16T10:34:50.289+0000] {bigquery.py:614} INFO - Executing: CREATE TEMPORARY TABLE IF NOT EXISTS is_atr_research_card_attribute_staging
+(
+  easy_id INT64 NOT NULL,
+  annual_income_amount INT64,
+  marriage_kbn INT64,
+  lodger_family_count INT64,
+  children_count INT64,
+  house_form_kbn INT64,
+  cars_count INT64,
+  education_kbn INT64,
+  driving_licence_kbn INT64,
+  industry_kbn INT64,
+  occupation_kbn INT64
+)
+;
+INSERT INTO is_atr_research_card_attribute_staging (easy_id, annual_income_amount, marriage_kbn, lodger_family_count, children_count, house_form_kbn, cars_count, education_kbn, driving_licence_kbn, industry_kbn, occupation_kbn)
+    SELECT DISTINCT
+        coalesce(rc.easy_id, kc.easy_id) AS easy_id,
+        CASE
+          WHEN coalesce(cast(rc.update_date  as date),  cast('0001-01-01' as date)) >= coalesce(cast(kc.agreement_date as date), cast( '0001-01-01' as date))
+           AND rc.update_date IS NOT NULL THEN rc.year_income_kbn
+          ELSE CASE
+            WHEN kc.salary_kbn = 0 THEN 0
+            WHEN kc.salary_kbn BETWEEN 100 AND 300 THEN 1
+            WHEN kc.salary_kbn BETWEEN 400 AND 500 THEN 2
+            WHEN kc.salary_kbn BETWEEN 600 AND 700 THEN 3
+            WHEN kc.salary_kbn BETWEEN 800 AND 900 THEN 4
+            WHEN kc.salary_kbn BETWEEN 1000 AND 1100 THEN 5
+            WHEN kc.salary_kbn BETWEEN 1200 AND 1400 THEN 6
+            WHEN kc.salary_kbn >= 1500 THEN 7
+          END
+        END AS annual_income_amount,
+        CASE
+          WHEN coalesce(cast(rc.update_date  as date),  cast('0001-01-01' as date)) >= coalesce(cast(kc.agreement_date as date), cast( '0001-01-01' as date))
+           AND rc.update_date IS NOT NULL THEN rc.marriage_kbn
+          ELSE CASE
+            WHEN cast(kc.family_kbn as int64) = 0 THEN 0
+            WHEN cast(kc.family_kbn as int64) BETWEEN 1 AND 2 THEN 1
+            WHEN cast(kc.family_kbn as int64) >= 3 THEN 2
+          END
+        END AS marriage_kbn,
+        coalesce(rc.live_with_family_num, 0) AS lodger_family_count,
+        CASE
+          WHEN coalesce(cast(rc.update_date  as date),  cast('0001-01-01' as date)) >= coalesce(cast(kc.agreement_date as date), cast( '0001-01-01' as date))
+           AND rc.update_date IS NOT NULL THEN rc.child_kbn
+          ELSE CASE
+            WHEN cast(kc.family_kbn as int64) = 0 THEN 0
+            WHEN cast(kc.family_kbn as int64) IN(
+              1, 5
+            ) THEN 1
+            WHEN cast(kc.family_kbn as int64) BETWEEN 2 AND 4 THEN 2
+          END
+        END AS children_count,
+        CASE
+          WHEN coalesce(cast(rc.update_date  as date),  cast('0001-01-01' as date)) >= coalesce(cast(kc.agreement_date as date), cast( '0001-01-01' as date))
+           AND rc.update_date IS NOT NULL THEN rc.house_form_kbn
+          ELSE CASE
+            WHEN cast(kc.housing_kbn as int64) = 0 THEN 0
+            WHEN cast(kc.housing_kbn as int64) = 1 THEN 2
+            WHEN cast(kc.housing_kbn as int64) = 2 THEN 3
+            WHEN cast(kc.housing_kbn as int64) BETWEEN 3 AND 5 THEN 5
+            WHEN cast(kc.housing_kbn as int64) BETWEEN 6 AND 10 THEN 4
+            WHEN cast(kc.housing_kbn as int64) = 99 THEN 6
+          END
+        END AS house_form_kbn,
+        coalesce(rc.car_kbn, 0) AS cars_count,
+        coalesce(rc.edu_background_kbn, 0) AS education_kbn,
+        coalesce(rc.driver_licence_kbn, 0) AS driving_licence_kbn,
+        CASE
+          WHEN rc.easy_id IS NOT NULL THEN rc.industry_kbn
+          ELSE CASE
+            WHEN cast(kc.business_type_cd as int64) = 0 THEN 0
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 10000 AND 40000
+             OR cast(kc.business_type_cd as int64) BETWEEN 61200 AND 61300
+             OR cast(kc.business_type_cd as int64) = 70700 THEN 50
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 61400 AND 61700
+             OR cast(kc.business_type_cd as int64) = 70800 THEN 7
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 60000 AND 60500
+             OR cast(kc.business_type_cd as int64) = 69900 THEN 51
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 60600 AND 60606 THEN 56
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 60700 AND 61100
+             OR cast(kc.business_type_cd as int64) = 70600 THEN 8
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 70000 AND 70400
+             OR cast(kc.business_type_cd as int64) BETWEEN 71100 AND 90400
+             OR cast(kc.business_type_cd as int64) BETWEEN 90601 AND 99999 THEN 52
+            WHEN cast(kc.business_type_cd as int64) = 70500 THEN 9
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 50000 AND 50207
+             OR cast(kc.business_type_cd as int64) = 71000 THEN 11
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 90500 AND 90505
+             OR cast(kc.business_type_cd as int64) = 141000 THEN 4
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 100000 AND 109900 THEN 17
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 110000 AND 110199 THEN 12
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 120000 AND 120700 THEN 54
+            WHEN cast(kc.business_type_cd as int64) = 120800
+             OR cast(kc.business_type_cd as int64) BETWEEN 141204 AND 141399 THEN 3
+            WHEN cast(kc.business_type_cd as int64) = 129900 THEN 54
+            WHEN cast(kc.business_type_cd as int64) = 130000 THEN 57
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 140900 AND 140903
+             OR cast(kc.business_type_cd as int64) BETWEEN 141100 AND 141203 THEN 14
+            WHEN cast(kc.business_type_cd as int64) = 140000
+             OR cast(kc.business_type_cd as int64) BETWEEN 140200 AND 140802
+             OR cast(kc.business_type_cd as int64) BETWEEN 141400 AND 141500
+             OR cast(kc.business_type_cd as int64) = 141700 THEN 18
+            WHEN cast(kc.business_type_cd as int64) = 141800 THEN 20
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 140100 AND 140199 THEN 53
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 141600 AND 141699
+             OR cast(kc.business_type_cd as int64) BETWEEN 141900 AND 141999 THEN 55
+            WHEN cast(kc.business_type_cd as int64) BETWEEN 142000 AND 150000 THEN 58
+          END
+        END AS industry_kbn,
+        CASE
+          WHEN rc.easy_id IS NOT NULL THEN rc.job_kbn
+          ELSE CASE
+            WHEN upper(rtrim(kc.job_type_category_name)) = upper('会社役員') THEN  9
+            WHEN upper(rtrim(kc.job_type_category_name)) = upper('会社員') THEN 50
+            WHEN upper(rtrim(kc.job_type_category_name)) = upper('公務員') THEN 10
+            WHEN upper(rtrim(kc.job_type_category_name)) = upper('自営業') THEN 14
+            WHEN upper(rtrim(kc.job_type_category_name)) = upper('有資格業（医師、弁護士等）') THEN 12
+            WHEN upper(rtrim(kc.job_type_category_name)) = upper('パート・アルバイト') THEN 15
+            WHEN upper(rtrim(kc.job_type_category_name)) = upper('主婦') THEN 17
+            WHEN upper(rtrim(kc.job_type_category_name)) = upper('学生') THEN 23
+            WHEN upper(rtrim(kc.job_type_category_name)) = upper('年金') THEN 51
+            WHEN upper(rtrim(kc.job_type_category_name)) = upper('無職') THEN 18
+            WHEN upper(rtrim(kc.job_type_category_name)) = upper('不明') THEN  0
+          END
+        END AS occupation_kbn
+      FROM
+        (
+          SELECT
+              av_pim_res_customer_tbl.easy_id,
+              av_pim_res_customer_tbl.year_income_kbn,
+              av_pim_res_customer_tbl.marriage_kbn,
+              av_pim_res_customer_tbl.live_with_family_num,
+              av_pim_res_customer_tbl.child_kbn,
+              av_pim_res_customer_tbl.house_form_kbn,
+              av_pim_res_customer_tbl.car_kbn,
+              av_pim_res_customer_tbl.edu_background_kbn,
+              av_pim_res_customer_tbl.driver_licence_kbn,
+              av_pim_res_customer_tbl.industry_kbn,
+              av_pim_res_customer_tbl.job_kbn,
+              av_pim_res_customer_tbl.updt_timestamp AS update_date
+            FROM
+              `spdb-data`.bisp.av_pim_res_customer_tbl
+            WHERE (av_pim_res_customer_tbl.research_entry_sts = 1
+             OR av_pim_res_customer_tbl.poime_entry_sts = 1
+             OR av_pim_res_customer_tbl.poime_mobile_entry_sts = 1)
+             AND av_pim_res_customer_tbl.invalid_flg = 0
+        ) AS rc
+        FULL OUTER JOIN (
+          SELECT
+              ca.easy_id,
+              jm.job_type_category_name,
+              ca.business_type_cd,
+              ca.salary_kbn,
+              ca.family_kbn,
+              ca.housing_kbn,
+              ca.agreement_date
+            FROM
+              (
+                SELECT
+                    kc_card_attribute_tbl.easy_id,
+                    kc_card_attribute_tbl.customer_no,
+                    kc_card_attribute_tbl.job_type_cd,
+                    kc_card_attribute_tbl.business_type_cd,
+                    kc_card_attribute_tbl.salary_kbn,
+                    kc_card_attribute_tbl.family_kbn,
+                    kc_card_attribute_tbl.housing_kbn,
+                    kc_card_attribute_tbl.agreement_date
+                  FROM
+                    `spdb-data`.ua_view04.kc_card_attribute_tbl
+                  WHERE kc_card_attribute_tbl.easy_id IN(
+                    SELECT
+                        kc_card_attribute_tbl_0.easy_id
+                      FROM
+                        `spdb-data`.ua_view04.kc_card_attribute_tbl AS kc_card_attribute_tbl_0
+                      WHERE cast(available_kbn as int64) = 0
+                       AND cast(issue_status_kbn as int64) = 9
+                       AND cast(card_type_kbn as int64) = 0
+                  )
+                  QUALIFY row_number() OVER (PARTITION BY kc_card_attribute_tbl.easy_id ORDER BY kc_card_attribute_tbl.salary_kbn, kc_card_attribute_tbl.customer_no DESC) = 1
+              ) AS ca
+              LEFT OUTER JOIN `spdb-data`.ua_view04.kc_job_type_mst AS jm ON ca.job_type_cd = jm.job_type_cd
+        ) AS kc ON rc.easy_id = kc.easy_id
+        INNER JOIN `spdb-data`.bisp.is_atr_member_base AS mb ON coalesce(rc.easy_id, kc.easy_id) = mb.easy_id
+;
+ASSERT NOT EXISTS (
+    WITH TEMP AS (SELECT easy_id
+    from `spdb-data`.bisp.is_atr_research_card_attribute
+    union all
+    SELECT easy_id
+    from
+    is_atr_research_card_attribute_staging
+    )
+
+    SELECT easy_id,count(*)
+    FROM TEMP
+    group by easy_id
+    having count(*) > 1
+) AS 'Uniqueness violation when inserting into teradata.bisp.is_atr_research_card_attribute';
+INSERT INTO `spdb-data`.bisp.is_atr_research_card_attribute (easy_id, annual_income_amount, marriage_kbn, lodger_family_count, children_count, house_form_kbn, cars_count, education_kbn, driving_licence_kbn, industry_kbn, occupation_kbn)
+  SELECT
+      is_atr_research_card_attribute_staging.easy_id,
+      is_atr_research_card_attribute_staging.annual_income_amount,
+      is_atr_research_card_attribute_staging.marriage_kbn,
+      is_atr_research_card_attribute_staging.lodger_family_count,
+      is_atr_research_card_attribute_staging.children_count,
+      is_atr_research_card_attribute_staging.house_form_kbn,
+      is_atr_research_card_attribute_staging.cars_count,
+      is_atr_research_card_attribute_staging.education_kbn,
+      is_atr_research_card_attribute_staging.driving_licence_kbn,
+      is_atr_research_card_attribute_staging.industry_kbn,
+      is_atr_research_card_attribute_staging.occupation_kbn
+    FROM
+      is_atr_research_card_attribute_staging;
+[2025-06-16T10:34:50.296+0000] {base.py:71} INFO - Using connection ID 'sa-tech-bi-bimart-prod' for task execution.
+[2025-06-16T10:34:50.434+0000] {logging_mixin.py:117} WARNING - /home/airflow/.local/lib/python3.7/site-packages/airflow/providers/google/cloud/hooks/bigquery.py:2047 DeprecationWarning: This method is deprecated. Please use `BigQueryHook.insert_job` method.
+[2025-06-16T10:34:50.438+0000] {bigquery.py:1539} INFO - Inserting job airflow_1750070090438488_c6e4739dd59a83e27d520c8421a49d5a
+[2025-06-16T10:34:53.162+0000] {taskinstance.py:1851} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.7/site-packages/airflow/providers/google/cloud/operators/bigquery.py", line 640, in execute
+    encryption_configuration=self.encryption_configuration,
+  File "/home/airflow/.local/lib/python3.7/site-packages/airflow/providers/google/cloud/hooks/bigquery.py", line 2181, in run_query
+    job = self.insert_job(configuration=configuration, project_id=self.project_id)
+  File "/home/airflow/.local/lib/python3.7/site-packages/airflow/providers/google/common/hooks/base_google.py", line 463, in inner_wrapper
+    return func(self, *args, **kwargs)
+  File "/home/airflow/.local/lib/python3.7/site-packages/airflow/providers/google/cloud/hooks/bigquery.py", line 1545, in insert_job
+    job.result(timeout=timeout, retry=retry)
+  File "/home/airflow/.local/lib/python3.7/site-packages/google/cloud/bigquery/job/query.py", line 1499, in result
+    do_get_result()
+  File "/home/airflow/.local/lib/python3.7/site-packages/google/cloud/bigquery/job/query.py", line 1489, in do_get_result
+    super(QueryJob, self).result(retry=retry, timeout=timeout)
+  File "/home/airflow/.local/lib/python3.7/site-packages/google/cloud/bigquery/job/base.py", line 728, in result
+    return super(_AsyncJob, self).result(timeout=timeout, **kwargs)
+  File "/home/airflow/.local/lib/python3.7/site-packages/google/api_core/future/polling.py", line 137, in result
+    raise self._exception
+google.api_core.exceptions.BadRequest: 400 Access Denied: Table spdb-dwh-prod:variety.pointmail_customer_tbl: User does not have permission to query table spdb-dwh-prod:variety.pointmail_customer_tbl, or perhaps it does not exist. at [16:1]
+
+Location: asia-northeast1
+Job ID: airflow_1750070090438488_c6e4739dd59a83e27d520c8421a49d5a
+
+[2025-06-16T10:34:53.177+0000] {taskinstance.py:1406} INFO - Marking task as UP_FOR_RETRY. dag_id=COKWD999, task_id=COKWD007_SQL_ARAI001, execution_date=20250609T093000, start_date=20250616T103448, end_date=20250616T103453
+[2025-06-16T10:34:53.195+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 7222078 for task COKWD007_SQL_ARAI001 (400 Access Denied: Table spdb-dwh-prod:variety.pointmail_customer_tbl: User does not have permission to query table spdb-dwh-prod:variety.pointmail_customer_tbl, or perhaps it does not exist. at [16:1]
+
+Location: asia-northeast1
+Job ID: airflow_1750070090438488_c6e4739dd59a83e27d520c8421a49d5a
+; 80)
+[2025-06-16T10:34:53.219+0000] {local_task_job.py:164} INFO - Task exited with return code 1
+
+

@@ -3,6 +3,8 @@ import time
 import uuid
 import json
 import logging
+import os
+from datetime import datetime
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import BaseMessage, HumanMessage
@@ -13,7 +15,8 @@ from agent.model import model
 from utilities.utils import extract_errors_from_log
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-
+from typing import Dict, Any
+from rca.rca import generate_rca_pdf
 
 # Load env and setup logging
 load_dotenv()
@@ -27,6 +30,7 @@ class GraphState(TypedDict):
     dag_name: Optional[str]
     dag_run_date: Optional[str]
     dag_run_id: Optional[str]
+    log_url: Optional[str]
     logs: Optional[str]
     extracted_logs: Optional[str]
     analysis_results: Optional[str]
@@ -67,6 +71,7 @@ def extract_dag_info(state: GraphState) -> Dict[str, any]:
     logger.info("=== NODE: extract_dag_info - Starting DAG info extraction ===")
     messages = state.get("messages", {})
     text_details = messages.get("text_details", {})
+    print(f"Extracting DAG info from: {text_details}")
     if isinstance(text_details, str):
         try:
             text_details = json.loads(text_details)
@@ -77,6 +82,7 @@ def extract_dag_info(state: GraphState) -> Dict[str, any]:
         "dag_run_id": text_details.get("run_id"),
         "dag_run_date": text_details.get("run_date"),
         "dag_status": text_details.get("dag_status"),
+        "log_url": text_details.get("log_url"),
         "user_message": text_details.get("full_text"),
         "slack_sent": False,
         "rerun_attempted": False,
@@ -142,88 +148,6 @@ def get_logs(state: GraphState) -> Dict[str, str]:
         return {"logs": f"Error: {e}", "extracted_logs": ""}
 
 
-# 7.  RCA Generation Node
-def create_rca_node():
-    prompt_text = """You are an expert in Airflow and debugging complex systems.
-    Analyze the following Airflow logs to determine the root cause of the failure.
-    Present your findings in the following format:
-
-    **Root Cause:** [A concise description of the root cause]
-
-    **Contributing Factors:** [A bulleted list of factors that contributed to the failure]
-
-    **Steps to Reproduce:** [Detailed steps to reproduce the issue]
-
-    **Resolution:** [Specific steps to resolve the issue and prevent it from recurring]
-
-    **Logs:**
-    {logs}
-    """
-
-    prompt = ChatPromptTemplate.from_template(prompt_text)
-
-    llm = prompt | model
-
-    def generate_rca(state: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Generates a root cause analysis from Airflow logs using an LLM.
-
-        Args:
-            state (Dict[str, Any]): The current LangGraph state.  Must contain Airflow logs under the key 'logs'.
-
-        Returns:
-            Dict[str, Any]:  A dictionary containing the updated state, with the RCA stored under the keys 'analysis_results' and 'proposed_solution'.
-        """
-        extracted_logs = state.get("extracted_logs")
-        if not logs:
-            return {
-                "analysis_results": "Error: Airflow logs not found in state.",
-                "proposed_solution": "",
-            }
-
-        try:
-            rca_response = llm.invoke({"logs": extracted_logs})
-            rca_text = rca_response.content
-
-            #  Split the response into analysis and solution (if the LLM follows the format)
-            if "**Root Cause:**" in rca_text and "**Resolution:**" in rca_text:
-                try:
-                    root_cause_start = rca_text.find("**Root Cause:**") + len(
-                        "**Root Cause:**"
-                    )
-                    contributing_factors_start = rca_text.find(
-                        "**Contributing Factors:**"
-                    )
-                    if contributing_factors_start == -1:
-                        contributing_factors_start = len(rca_text)
-                    analysis = rca_text[
-                        root_cause_start:contributing_factors_start
-                    ].strip()
-
-                    resolution_start = rca_text.find("**Resolution:**") + len(
-                        "**Resolution:**"
-                    )
-                    solution = rca_text[resolution_start:].strip()
-                    print(f"RCA Analysis: {analysis}")
-                    print(f"RCA Solution: {solution}")
-                except Exception as e:
-                    analysis = rca_text
-                    solution = "Could not parse analysis and solution accurately."
-            else:
-                analysis = rca_text
-                solution = "Could not parse analysis and solution accurately."
-
-            return {"analysis_results": analysis, "proposed_solution": solution}
-        except Exception as e:
-            return {
-                "analysis_results": f"Error generating RCA: {e}",
-                "proposed_solution": "",
-            }
-
-    return generate_rca
-
-
-# 8.  Search Error Category
 def search_error_category(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     Search for error category based on logs and update the action state.
@@ -238,7 +162,11 @@ def search_error_category(state: Dict[str, Any]) -> Dict[str, Any]:
 
     try:
         # Use the extracted logs as the query
-        query_text = extracted_logs
+        if isinstance(extracted_logs, list):
+            query_text = "\n".join(extracted_logs)  # Join list elements into a string
+        else:
+            query_text = extracted_logs
+
         similar_docs = retrieve_similar_error_action(query_text, k=3)
 
         if similar_docs:
@@ -365,11 +293,12 @@ def check_error_bucket(state: GraphState) -> Dict[str, any]:
 # 8. Routing After Check
 def route_after_check(
     state: GraphState,
-) -> Literal["analyze_logs", "send_analysis_to_slack"]:
+) -> Literal["analyze_logs", "generate_rca"]:  # Route to RCA instead of slack
     """Route based on whether we found a cached solution"""
     if state.get("is_cached") and state.get("cached_solution"):
         # Skip analysis if we have a good cached solution
-        return "send_analysis_to_slack"
+        return "generate_rca"  # Route to RCA generation
+
     return "analyze_logs"
 
 
@@ -474,6 +403,135 @@ def bucket_error_analysis(state: GraphState) -> Dict[str, str]:
         return {"bucket_response": f"Bucket error: {e}"}
 
 
+def create_rca_node():
+    prompt_text = """You are an expert in Airflow and debugging complex systems.
+    Analyze the following Airflow logs to determine the root cause of the failure.
+    Present your findings in the following format:
+
+    **Root Cause:** [A concise description of the root cause]
+
+    **Contributing Factors:** [A bulleted list of factors that contributed to the failure]
+
+    **Steps to Reproduce:** [Detailed steps to reproduce the issue]
+
+    **Resolution:** [Specific steps to resolve the issue and prevent it from recurring]
+
+    **Logs:**
+    {logs}
+    """
+
+    prompt = ChatPromptTemplate.from_template(prompt_text)
+    llm = prompt | model_with_tools
+    return llm
+
+
+llm = create_rca_node()
+
+
+def generate_rca(state: Dict[str, Any]) -> Dict[str, Any]:
+    extracted_logs = state.get("extracted_logs")
+    if not extracted_logs:
+        return {
+            "analysis_results": "Error: Airflow logs not found in state.",
+            "proposed_solution": "",
+        }
+
+    try:
+        rca_response = llm.invoke({"logs": extracted_logs})
+        rca_text = rca_response.content
+
+        # Parse LLM response
+        if "**Root Cause:**" in rca_text and "**Resolution:**" in rca_text:
+            try:
+                root_cause_start = rca_text.find("**Root Cause:**") + len(
+                    "**Root Cause:**"
+                )
+                contributing_factors_start = rca_text.find("**Contributing Factors:**")
+                if contributing_factors_start == -1:
+                    contributing_factors_start = len(rca_text)
+                root_cause = rca_text[
+                    root_cause_start:contributing_factors_start
+                ].strip()
+
+                resolution_start = rca_text.find("**Resolution:**") + len(
+                    "**Resolution:**"
+                )
+                resolution = rca_text[resolution_start:].strip()
+            except Exception:
+                root_cause = rca_text
+                resolution = "Could not parse resolution accurately."
+        else:
+            root_cause = rca_text
+            resolution = "Could not parse resolution accurately."
+
+        # Map state fields to RCA format
+        dag_name = state.get("dag_name", "N/A")
+        dag_run_id = state.get("dag_run_id", "N/A")
+        dag_run_date = state.get("dag_run_date", "N/A")
+        task_id = "N/A"  # not available in current state
+        analysis_results = state.get("analysis_results", "N/A")
+        error_message = state.get("error_message", "N/A")
+        investigation = state.get("cached_analysis") or state.get(
+            "analysis_results", "N/A"
+        )
+        actions = state.get("actions") or resolution
+
+        # Use current timestamp as incident time
+        incident_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Format final RCA content
+        rca_content = f"""RCA Report
+
+1. Date & Time of Incident
+{incident_time}
+
+2. Affected DAG ID
+{dag_name}
+
+3. Execution Date / Run ID
+{dag_run_date} / {dag_run_id}
+
+4. Logs Summary (Key Error Messages)
+{error_message}
+
+5. Investigation Steps Taken
+{investigation}
+
+6. Root Cause
+{root_cause}
+
+7. Resolution / Fix Applied
+{resolution}
+
+8. Prevention Measures / Action Items
+{actions}
+"""
+
+        # Save RCA file
+        os.makedirs("rca/rca_pdf", exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"rca/rca_raw/{dag_name}_{dag_run_id}_{timestamp}.txt".replace(" ", "_")
+
+        with open(filename, "w") as f:
+            f.write(rca_content)
+
+        generate_rca_pdf(
+            input_txt_file=filename,
+            output_pdf_file=f"rca/rca_pdf/rca_report_{dag_name}_{dag_run_id}_{timestamp}.pdf",
+        )
+        return {
+            "analysis_results": root_cause,
+            "proposed_solution": resolution,
+            "rca_file": filename,
+        }
+
+    except Exception as e:
+        return {
+            "analysis_results": f"Error generating RCA: {e}",
+            "proposed_solution": "",
+        }
+
+
 # 11. Send Analysis to Slack
 def send_analysis_to_slack(state: GraphState) -> Dict[str, any]:
     logger.info("=== NODE: send_analysis_to_slack - Sending notification to Slack ===")
@@ -566,7 +624,6 @@ def summarize_outcome(state: GraphState) -> Dict[str, str]:
 # GRAPH CONSTRUCTION
 # ============================================
 
-
 # GRAPH
 builder = StateGraph(GraphState)
 builder.set_entry_point("extract_info")
@@ -577,7 +634,7 @@ builder.add_node("validate_dag_info", validate_dag_info)
 builder.add_node("exit", exit_node)
 builder.add_node("route_logs", route_logs_node)
 builder.add_node("get_logs", get_logs)
-builder.add_node("generate_rca", create_rca_node())  # Add the RCA node
+builder.add_node("generate_rca", generate_rca)  # Add the RCA node
 builder.add_node("search_error_category", search_error_category)
 builder.add_node("do_not_fetch_logs", do_not_fetch_logs)
 builder.add_node("check_error_bucket", check_error_bucket)
@@ -603,11 +660,8 @@ builder.add_conditional_edges(
     {"get_logs": "get_logs", "do_not_fetch_logs": "do_not_fetch_logs"},
 )
 
-# Modified flow: get logs -> RCA -> check for similar errors -> analyze if needed
-builder.add_edge("get_logs", "generate_rca")  # get_logs now goes to generate_rca
-builder.add_edge(
-    "generate_rca", "search_error_category"
-)  # generate_rca goes to check_error_bucket
+# Modified flow: get logs -> search for error category -> check error bucket -> analyze if needed -> RCA -> slack
+builder.add_edge("get_logs", "search_error_category")
 builder.add_edge("search_error_category", "check_error_bucket")
 
 builder.add_conditional_edges(
@@ -615,12 +669,19 @@ builder.add_conditional_edges(
     route_after_check,
     {
         "analyze_logs": "analyze_logs",
-        "send_analysis_to_slack": "send_analysis_to_slack",
+        "generate_rca": "generate_rca",  # Route to RCA if cached
     },
 )
 
-builder.add_edge("analyze_logs", "bucket_error_analysis")
-builder.add_edge("bucket_error_analysis", "send_analysis_to_slack")
+builder.add_edge(
+    "analyze_logs", "bucket_error_analysis"
+)  # store new analysis if not cached
+builder.add_edge(
+    "bucket_error_analysis", "generate_rca"
+)  # RCA after new analysis is bucketed
+
+builder.add_edge("generate_rca", "send_analysis_to_slack")  # RCA to slack
+
 builder.add_edge("send_analysis_to_slack", "rerun_dag_if_required")
 builder.add_edge("rerun_dag_if_required", "summarize_outcome")
 builder.add_edge("do_not_fetch_logs", "summarize_outcome")

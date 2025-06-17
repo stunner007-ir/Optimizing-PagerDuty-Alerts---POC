@@ -21,6 +21,7 @@ api_key = os.getenv("RAKUTEN_AI_API_KEY")
 
 # Create directory if not exists
 os.makedirs(CHROMA_DIR, exist_ok=True)
+
 # Create embedding model with timeout
 embeddings = OpenAIEmbeddings(
     model="text-embedding-3-small",
@@ -34,21 +35,28 @@ df = pd.read_excel(EXCEL_FILE_PATH)
 df = df.dropna(how="all")  # Remove fully empty rows
 
 
-# Clean text from each row
-def clean_text(text):
-    text = text.replace("\xa0", " ")  # Remove non-breaking space
-    text = re.sub(r"\s+", " ", text)  # Collapse multiple spaces/newlines
-    return text.replace(" | nan", " | Unknown").strip()
+def clean_text(text_or_list):
+    if isinstance(text_or_list, list):
+        cleaned_list = []
+        for text in text_or_list:
+            text = text.replace("\xa0", " ")  # Remove non-breaking space
+            text = re.sub(r"\s+", " ", text)  # Collapse multiple spaces/newlines
+            text = text.replace(" | nan", " | Unknown").strip()
+            cleaned_list.append(text)
+        return cleaned_list
+    else:
+        text = text_or_list.replace("\xa0", " ")  # Remove non-breaking space
+        text = re.sub(r"\s+", " ", text)  # Collapse multiple spaces/newlines
+        return text.replace(" | nan", " | Unknown").strip()
 
 
 # Convert rows to clean text format
 def row_to_text(row):
     try:
-        return clean_text(
-            " | ".join(
-                str(row[col]) if pd.notna(row[col]) else "" for col in df.columns
-            )
+        row_str = " | ".join(
+            str(row[col]) if pd.notna(row[col]) else "" for col in df.columns
         )
+        return clean_text(row_str)
     except Exception as e:
         print(f"⚠️ Row processing error: {e}")
         return ""
@@ -78,7 +86,6 @@ if os.path.exists(os.path.join(CHROMA_DIR, "chroma.sqlite3")):
         collection_name="error_categories",
     )
     print("✅ Vector store loaded")
-
 else:
     print("✅ Creating new Chroma database...")
     vectordb = Chroma.from_documents(

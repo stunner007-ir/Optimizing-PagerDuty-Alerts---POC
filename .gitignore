@@ -11,3 +11,5 @@ __pycache__/
 *.pyc
 print_graph.ipynb
 sample_log.log
+rca/rca_raw
+rca/rca_pdf
